@@ -1,0 +1,16 @@
+# Core Scientific Math
+numpy==1.26.4
+scipy==1.12.0
+
+# Plotting Voltage Traces
+matplotlib==3.8.3
+
+# Jupyter for interactive testing of the baseline neuron
+notebook==7.1.1
+
+# SNN Frameworks
+brian2==2.6.0
+snntorch==0.8.0
+
+# Note: To leverage CUDA for PyTorch on an RTX GPU, install PyTorch separately via the official PyTorch command:
+# pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
