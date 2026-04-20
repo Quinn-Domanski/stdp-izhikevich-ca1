@@ -1,51 +1,63 @@
-from brian2 import *
 import matplotlib.pyplot as plt
+from brian2 import *
 from model import IzhikevichNeuron
 
-def run_experiment():
-    start_scope()
+def run_baseline_validation():
+    print("Running CA1 Baseline Validation Suite...")
 
-    # instantiate baseline regular spiking neuron
-    print("Initializing baseline Izhikevich neuron...")
-    neuron = IzhikevichNeuron()
-
-    # create explicit network to tell brian2 which objects to simulate:
-    # a group of Izhikevich modeled neurons, the internal state, and spikes
-    net = Network(neuron.group, neuron.state_monitor, neuron.spike_monitor)
-
-    # experimental timeline
-    print("Running initial resting phase (50 ms)...")
-    net.run(50*ms)
-
-    # inject a step of dc-current I=10 as defined in the 2003 paper
-    print("Injecting DC current step (I=10)...")
-    neuron.inject_current(10.0)
-
-    # run simulation for another 250ms to observe spikes
-    print("Simulating active spiking phase (250 ms)...")
-    net.run(250*ms)
-
-    # plotting patch-clamp results
-    print("Generating voltage trace plot...")
-    plt.figure(figsize=(10, 4))
+    # ---------------------------------------------------------
+    # TEST 1: Resting Potential (0 pA)
+    # ---------------------------------------------------------
+    neuron_rest = IzhikevichNeuron()
+    neuron_rest.inject_current(0.0) 
+    net_rest = Network(neuron_rest.group, neuron_rest.state_monitor, neuron_rest.spike_monitor)
+    net_rest.run(100*ms)
     
-    # extract the simulated time and voltage from StateMonitor
-    time_data = neuron.state_monitor.t / ms
-    voltage_data = neuron.state_monitor.v[0]
+    # ---------------------------------------------------------
+    # TEST 2: Rheobase (Target: ~80 pA biological)
+    # I=2.0 triggers exactly 1 spike, establishing our scale factor.
+    # ---------------------------------------------------------
+    neuron_rheo = IzhikevichNeuron()
+    neuron_rheo.inject_current(2.0) 
+    net_rheo = Network(neuron_rheo.group, neuron_rheo.state_monitor, neuron_rheo.spike_monitor)
+    net_rheo.run(100*ms)
+
+    # ---------------------------------------------------------
+    # TEST 3: Active Firing (Target: ~200 pA biological)
+    # I=5.0 triggers multiple spikes to show healthy recovery.
+    # ---------------------------------------------------------
+    neuron_active = IzhikevichNeuron()
+    neuron_active.inject_current(5.0) 
+    net_active = Network(neuron_active.group, neuron_active.state_monitor, neuron_active.spike_monitor)
+    net_active.run(300*ms)
+
+    # ---------------------------------------------------------
+    # Plotting & Saving the Validation Figure
+    # ---------------------------------------------------------
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
     
-    plt.plot(time_data, voltage_data, color='#1f77b4', linewidth=1.5)
+    # Plot Test 1
+    ax1.plot(neuron_rest.state_monitor.t/ms, neuron_rest.state_monitor.v[0], color='blue', linewidth=2)
+    ax1.set_title('Test 1: Resting Potential ($I=0.0$)')
+    ax1.set_ylabel('Voltage (mV)')
+    ax1.axhline(-66.5, color='red', linestyle='--', alpha=0.5, label='Target Rest: -66.5 mV')
+    ax1.set_ylim(-75, -55)
+    ax1.legend()
+
+    # Plot Test 2
+    ax2.plot(neuron_rheo.state_monitor.t/ms, neuron_rheo.state_monitor.v[0], color='green', linewidth=2)
+    ax2.set_title('Test 2: Rheobase Threshold ($I=2.0$, Scales to ~80 pA)')
+    ax2.set_ylabel('Voltage (mV)')
     
-    # formatting the graph
-    plt.title('Izhikevich Model: Regular Spiking (RS) Baseline', fontsize=14, fontweight='bold')
-    plt.xlabel('Time (ms)', fontsize=12)
-    plt.ylabel('Membrane Potential (mV)', fontsize=12)
-    plt.axvline(x=50, color='red', linestyle='--', alpha=0.5, label='Current Injection Start')
-    plt.legend()
-    plt.grid(True, linestyle=':', alpha=0.7)
+    # Plot Test 3
+    ax3.plot(neuron_active.state_monitor.t/ms, neuron_active.state_monitor.v[0], color='purple', linewidth=2)
+    ax3.set_title('Test 3: Active Regular Spiking ($I=5.0$, Scales to ~200 pA)')
+    ax3.set_xlabel('Time (ms)')
+    ax3.set_ylabel('Voltage (mV)')
+    
     plt.tight_layout()
-    
-    # display the plot window
-    plt.show()
+    plt.savefig("CA1_Complete_Validation.png", dpi=300, bbox_inches='tight')
+    print("Success! Saved as 'CA1_Complete_Validation.png'")
 
 if __name__ == '__main__':
-    run_experiment()
+    run_baseline_validation()
