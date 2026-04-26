@@ -118,42 +118,45 @@ class ConductanceSTDPSynapse:
         """
         self.syn_eqs = '''
         w : 1
-        tau_pre : second
-        tau_post : second
+        taupre : second
+        taupost : second
         w_max : 1
         w_min : 1
-        A_pre : 1
-        A_post : 1
-        dapre/dt = -apre/tau_pre : 1 (event-driven)
-        dapost/dt = -apost/tau_post : 1 (event-driven)
+        Apre : 1   
+        Apost : 1  
+        dapre/dt = -apre/taupre : 1 (event-driven)
+        dapost/dt = -apost/taupost : 1 (event-driven)
         '''
         
-        # spike opens doors (g_post) instead of just teleporting voltage
         self.on_pre_eqs = '''
         g_post += w                
-        apre += A_pre              
+        apre += Apre               
         w = clip(w + apost, w_min, w_max) 
         '''
         
         self.on_post_eqs = '''
-        apost += A_post            
+        apost += Apost             
         w = clip(w + apre, w_min, w_max)  
         '''
         
         self.synapses = Synapses(pre_group, post_group, model=self.syn_eqs, 
                                 on_pre=self.on_pre_eqs, on_post=self.on_post_eqs)
                                 
-        # set default STDP constants internally so experiments stay clean
-        self.synapses.tau_pre = 20*ms
-        self.synapses.tau_post = 20*ms
-        self.synapses.w_max = w_max
-        self.synapses.w_min = 0.0
-        self.synapses.A_pre = A_pre
-        self.synapses.A_post = A_post
+        # Temporarily store our Python arguments so we can use them later
+        self._Apre = A_pre
+        self._Apost = A_post
+        self._wmax = w_max
 
     def connect(self, i, j, start_weight=5.0):
         """Helper function to connect indices and set starting weight"""
         self.synapses.connect(i=i, j=j)
+        
+        self.synapses.taupre = 20*ms
+        self.synapses.taupost = 20*ms
+        self.synapses.w_max = self._wmax
+        self.synapses.w_min = 0.0
+        self.synapses.Apre = self._Apre
+        self.synapses.Apost = self._Apost
         self.synapses.w = start_weight
 
 
