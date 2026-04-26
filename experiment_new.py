@@ -32,7 +32,7 @@ def run_conductance_experiment():
 
     # PHASE 1: THE BASELINE EPSP
     print("Phase 1: Firing Pre-Neuron (Baseline EPSP)...")
-    neurons.group.I_ext[0] = 50.0  # Shock Neuron 0
+    neurons.group.I_ext[0] = 10.0  # Shock Neuron 0
     net.run(2*ms)
     neurons.group.I_ext[0] = 0.0   # Turn shock off
     
@@ -40,7 +40,7 @@ def run_conductance_experiment():
 
     # PHASE 2: THE LEARNING (LTP)
     print("Phase 2: Firing Post-Neuron (Triggering STDP LTP)...")
-    neurons.group.I_ext[1] = 50.0  # Shock Neuron 1
+    neurons.group.I_ext[1] = 10.0  # Shock Neuron 1
     net.run(2*ms)
     neurons.group.I_ext[1] = 0.0 
     
