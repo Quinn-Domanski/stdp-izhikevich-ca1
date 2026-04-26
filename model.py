@@ -159,3 +159,54 @@ class ConductanceSTDPSynapse:
         self.synapses.Apost = self._Apost
         self.synapses.w = start_weight
     
+# class FluidIPNeuron:
+#     def __init__(self, N=1, C=100.0, k_param=0.7, v_r=-70.0, v_t_base=-40.0, a=0.03, b=-2.0, c=-50.0, d=100.0):
+#         """
+#         The 2007 Generalized Izhikevich Model with Novel Fluid Intrinsic Plasticity.
+#         All variables are dimensionless to match Phase 1 architecture perfectly.
+#         """
+#         self.eqs = '''
+#         dv/dt = (k_param*(v - v_r)*(v - v_t) - u + I) / (C * ms) : 1
+#         du/dt = (a*(b*(v - v_r) - u)) / ms : 1
+
+#         # The Novelty: Fluid, asymptotically bounded E-S coupling
+#         v_t = v_t_base - 5.0 * tanh(k_IP * pos_delta_w) : 1
+
+#         pos_delta_w = clip(w_total - w_base, 0.0, 10.0) : 1
+
+#         w_total : 1
+#         I : 1
+#         k_param : 1
+#         v_r : 1
+#         v_t_base : 1
+#         a : 1
+#         b : 1
+#         c : 1
+#         d : 1
+#         C : 1
+#         k_IP : 1
+#         w_base : 1
+#         '''
+
+#         self.group = NeuronGroup(N, model=self.eqs, threshold='v >= 20.0', reset='v = c; u += d', method='euler')
+
+#         # Initialize Parameters (Dimensionless)
+#         self.group.k_param = k_param
+#         self.group.v_r = v_r
+#         self.group.v_t_base = v_t_base
+#         self.group.a = a
+#         self.group.b = b
+#         self.group.c = c
+#         self.group.d = d
+#         self.group.C = C
+#         self.group.k_IP = 0.5 
+#         self.group.w_base = 5.0
+
+#         # Initialize Variables to Perfect Equilibrium
+#         self.group.v = v_r
+#         self.group.u = 0.0  # Because v = v_r, b*(v-v_r) = 0, so u rests perfectly at 0
+#         self.group.I = 0.0
+#         self.group.w_total = 5.0
+
+#         self.state_monitor = StateMonitor(self.group, ['v', 'v_t'], record=True)
+#         self.spike_monitor = SpikeMonitor(self.group)
