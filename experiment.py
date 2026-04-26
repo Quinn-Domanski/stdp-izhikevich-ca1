@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from brian2 import *
 from model import IzhikevichNeuron
-from model import FluidIPNeuron
 
 prefs.codegen.target = "numpy" 
 
@@ -557,7 +556,7 @@ def run_phase4_perfect_ip():
     base_I[1] = 3.7
     net.run(150*ms)
     base_I[1] = 0.0
-    net.run(50*ms)
+    net.run(100*ms)
 
     # --- PLOTTING ---
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [2, 1]})
@@ -596,97 +595,8 @@ def run_phase4_perfect_ip():
     plt.savefig("04_CA1_Perfect_IP_Graph.png", dpi=300)
     plt.close('all')
     print("Saved -> '04_CA1_Perfect_IP_Graph.png'")
-
-# def run_phase4_fluid_ip():
-#     print("\n--- Running Phase 4: Fluid E-S Coupling (Generalized Model) ---")
-#     start_scope()
-
-#     # 1. Import your custom Fluid IP Neuron
-#     neurons = FluidIPNeuron(N=2)
     
-#     # 2. IP-Enabled Synapse Equations (Dimensionless)
-#     syn_eqs = '''
-#     w : 1
-#     dapre/dt = -apre/(20*ms) : 1 (event-driven)
-#     dapost/dt = -apost/(20*ms) : 1 (event-driven)
-#     w_total_post = w : 1 (summed)  
-#     '''
-#     on_pre_eqs = '''
-#     v_post += w               
-#     apre += 2.0              
-#     w = clip(w + apost, 0.0, 10.0) 
-#     '''
-#     on_post_eqs = '''
-#     apost += -2.0            
-#     w = clip(w + apre, 0.0, 10.0)  
-#     '''
-    
-#     syn = Synapses(neurons.group, neurons.group, model=syn_eqs, on_pre=on_pre_eqs, on_post=on_post_eqs)
-#     syn.connect(i=0, j=1) 
-#     syn.w = 5.0 
-    
-#     state_mon = StateMonitor(neurons.group, ['v', 'v_t'], record=True)
-#     syn_mon = StateMonitor(syn, 'w', record=True)
-#     net = Network(neurons.group, state_mon, syn, syn_mon)
 
-#     # --- THE EXPERIMENTAL TIMELINE ---
-    
-#     # Event 1: The "Before" Test (Inject 140. Fails because Rheobase is ~157)
-#     net.run(20*ms)
-#     neurons.group.I[1] = 140.0
-#     net.run(150*ms)
-#     neurons.group.I[1] = 0.0
-#     net.run(50*ms) 
-
-#     # Event 2: Forced STDP Training
-#     neurons.group.I[0] = 500.0  
-#     net.run(2*ms)
-#     neurons.group.I[0] = 0.0 
-#     net.run(8*ms) 
-#     neurons.group.I[1] = 500.0  
-#     net.run(2*ms)
-#     neurons.group.I[1] = 0.0 
-#     net.run(80*ms) 
-
-#     # Event 3: The "After" Test (Inject 140. Succeeds because Rheobase dropped)
-#     neurons.group.I[1] = 140.0
-#     net.run(150*ms)
-#     neurons.group.I[1] = 0.0
-#     net.run(50*ms)
-
-#     # --- PLOTTING ---
-#     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), gridspec_kw={'height_ratios': [2, 1]})
-    
-#     ax1.plot(state_mon.t/ms, state_mon.v[0], color='gray', linestyle=':', linewidth=1.5, label='Pre-Synaptic (Forced)')
-#     ax1.plot(state_mon.t/ms, state_mon.v[1], color='blue', linewidth=2, label='Post-Synaptic Voltage')
-    
-#     ax1.axvspan(20, 170, color='red', alpha=0.1, label='Stimulus: I=140 (Fails)')
-#     ax1.axvspan(220, 232, color='purple', alpha=0.2, label='Forced STDP Training (LTP)')
-#     ax1.axvspan(312, 462, color='green', alpha=0.1, label='Stimulus: I=140 (Succeeds)')
-    
-#     ax1.set_title('Phase 4: Fluid E-S Coupling (Generalized Model)', fontsize=14, fontweight='bold')
-#     ax1.set_ylabel('Voltage (mV)')
-#     ax1.set_ylim(-75, 40)
-#     ax1.legend(loc='upper left')
-#     ax1.grid(True, linestyle=':', alpha=0.6)
-
-#     color = 'tab:green'
-#     ax2.set_xlabel('Time (ms)')
-#     ax2.set_ylabel('Synaptic Weight ($w$)', color=color)
-#     ax2.plot(syn_mon.t/ms, syn_mon.w[0], color=color, linewidth=3)
-#     ax2.tick_params(axis='y', labelcolor=color)
-#     ax2.grid(True, linestyle=':', alpha=0.6)
-
-#     ax3 = ax2.twinx()  
-#     color = 'tab:orange'
-#     ax3.set_ylabel('Dynamic Threshold ($v_t$)', color=color)  
-#     ax3.plot(state_mon.t/ms, state_mon.v_t[1], color=color, linewidth=2, linestyle='--')
-#     ax3.tick_params(axis='y', labelcolor=color)
-
-#     plt.tight_layout()
-#     plt.savefig("04_CA1_Fluid_IP_Graph.png", dpi=300)
-#     plt.close('all')
-#     print("Saved -> '04_CA1_Fluid_IP_Graph.png'")
 
 if __name__ == '__main__':
     print("Starting CA1 Experiment Suite...")
@@ -715,4 +625,3 @@ if __name__ == '__main__':
     run_phase3_control()
     run_phase4_intrinsic_plasticity()
     run_phase4_perfect_ip()
-    run_phase4_fluid_ip()
