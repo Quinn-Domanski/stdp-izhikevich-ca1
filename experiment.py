@@ -11,25 +11,30 @@ def run_baseline_validation():
     neuron_rest = IzhikevichNeuron()
     neuron_rest.inject_current(0.0) 
     net_rest = Network(neuron_rest.group, neuron_rest.state_monitor, neuron_rest.spike_monitor)
-    net_rest.run(100*ms)
+    net_rest.run(300*ms)
     
     # ---------------------------------------------------------
     # TEST 2: Rheobase (Target: ~80 pA biological)
     # I=2.0 triggers exactly 1 spike, establishing our scale factor.
     # ---------------------------------------------------------
+    start_scope()
     neuron_rheo = IzhikevichNeuron()
-    neuron_rheo.inject_current(2.0) 
-    net_rheo = Network(neuron_rheo.group, neuron_rheo.state_monitor, neuron_rheo.spike_monitor)
-    net_rheo.run(100*ms)
+    net_rheo = Network(neuron_rheo.group, neuron_rheo.state_monitor)
+    net_rheo.run(20*ms)             # Start at rest
+    neuron_rheo.inject_current(4.01) # Turn on faucet just barely (Rheobase)
+    net_rheo.run(280*ms)            # Watch the slow climb
+
 
     # ---------------------------------------------------------
     # TEST 3: Active Firing (Target: ~200 pA biological)
     # I=5.0 triggers multiple spikes to show healthy recovery.
     # ---------------------------------------------------------
+    start_scope()
     neuron_active = IzhikevichNeuron()
-    neuron_active.inject_current(5.0) 
-    net_active = Network(neuron_active.group, neuron_active.state_monitor, neuron_active.spike_monitor)
-    net_active.run(300*ms)
+    net_active = Network(neuron_active.group, neuron_active.state_monitor)
+    net_active.run(20*ms)             # Start at rest
+    neuron_active.inject_current(10.0) # Hit it hard (Izhikevich standard)
+    net_active.run(480*ms)
 
     # ---------------------------------------------------------
     # Plotting & Saving the Validation Figure
@@ -40,7 +45,7 @@ def run_baseline_validation():
     ax1.plot(neuron_rest.state_monitor.t/ms, neuron_rest.state_monitor.v[0], color='blue', linewidth=2)
     ax1.set_title('Test 1: Resting Potential ($I=0.0$)')
     ax1.set_ylabel('Voltage (mV)')
-    ax1.axhline(-66.5, color='red', linestyle='--', alpha=0.5, label='Target Rest: -66.5 mV')
+    ax1.axhline(-70, color='red', linestyle='--', alpha=0.5, label='Target Rest: -70 mV')
     ax1.set_ylim(-75, -55)
     ax1.legend()
 
