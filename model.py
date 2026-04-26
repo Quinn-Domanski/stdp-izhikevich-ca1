@@ -109,10 +109,79 @@ class IzhikevichNeuronConductanceSynapse:
 
     def inject_current(self, current_value):
         """Inject current to all neurons in the group"""
-        self.group.I = current_value
+        self.group.I_ext = current_value
+
+class TwoCompartmentIzhikevichNeuron:
+    def __init__(self, N=1, a=0.02, b=0.2, c=-65.0, d=8.0):
+        """
+        advanced two compartment model of incorporating the dendrite
+        dendrite receives synaptic input and influences soma through axial current
+        """
+        self.eqs = '''
+        # soma: internal voltage and inhibitor mechanism
+        dv/dt = (0.04*v**2 + 5*v + 140 - u + I_ext + I_axial) / ms : 1
+        du/dt = (a*(b*v - u)) / ms : 1
+        
+        # dendrite: receiving zone
+        dv_dend/dt = (-(v_dend - E_rest) + I_syn - I_axial) / tau_dend : 1
+        
+        # synapse now interacting with dendrite
+        I_syn = g * (E_eq - v_dend) : 1
+        dg/dt = -g / tau_g : 1
+        
+        # axial current
+        I_axial = kappa * (v_dend - v) : 1
+        
+        # --- Parameters ---
+        I_ext : 1
+        a : 1
+        b : 1
+        c : 1
+        d : 1
+        tau_g : second
+        E_eq : 1
+        E_rest : 1
+        tau_dend : second
+        kappa : 1
+        '''
+        
+        self.threshold_condition = 'v >= 30'
+        self.reset_equations = '''
+        v = c
+        u = u + d
+        '''
+        
+        self.group = NeuronGroup(N, model=self.eqs, threshold=self.threshold_condition, 
+                                 reset=self.reset_equations, method='euler')
+        
+        self.group.a = a
+        self.group.b = b
+        self.group.c = c
+        self.group.d = d
+        
+        self.group.tau_g = 5*ms  
+        self.group.E_eq = 0.0    
+        
+        # dendritic parametrers
+        self.group.E_rest = -70.0   # the natural resting state of the dendrite
+        self.group.tau_dend = 10*ms # how long the dendrite holds a charge before leaking
+        self.group.kappa = 0.5      # coupling strength (higher = easier flow to soma)
+        
+        self.group.v = -70.0
+        self.group.u = b * -70.0
+        self.group.v_dend = -70.0
+        self.group.I_ext = 0.0
+        self.group.g = 0.0       
+        
+        self.state_monitor = StateMonitor(self.group, ['v', 'v_dend', 'u', 'g', 'I_syn', 'I_axial'], record=True)
+        self.spike_monitor = SpikeMonitor(self.group)
+
+    def inject_current(self, current_value):
+        """Inject current directly into the Soma"""
+        self.group.I_ext = current_value
 
 class ConductanceSTDPSynapse:
-    def __init__(self, pre_group, post_group, A_pre=0.1, A_post=-0.105, w_max=10.0):
+    def __init__(self, pre_group, post_group, A_pre=0.005, A_post=-0.00525, w_max=0.1):
         """
         STDP synapse that triggers conductance (g) instead of raw voltage
         """
@@ -147,7 +216,7 @@ class ConductanceSTDPSynapse:
         self._Apost = A_post
         self._wmax = w_max
 
-    def connect(self, i, j, start_weight=2.0):
+    def connect(self, i, j, start_weight=0.02):
         """Helper function to connect indices and set starting weight"""
         self.synapses.connect(i=i, j=j)
         
@@ -158,7 +227,6 @@ class ConductanceSTDPSynapse:
         self.synapses.Apre = self._Apre
         self.synapses.Apost = self._Apost
         self.synapses.w = start_weight
-<<<<<<< HEAD
 
 
 class ContinuousIPNeuron:
@@ -228,7 +296,6 @@ class DiscreteIPNeuron:
         
         self.state_monitor = StateMonitor(self.group, ['v', 'E'], record=True)
 
-=======
     
 # class FluidIPNeuron:
 #     def __init__(self, N=1, C=100.0, k_param=0.7, v_r=-70.0, v_t_base=-40.0, a=0.03, b=-2.0, c=-50.0, d=100.0):
@@ -281,4 +348,3 @@ class DiscreteIPNeuron:
 
 #         self.state_monitor = StateMonitor(self.group, ['v', 'v_t'], record=True)
 #         self.spike_monitor = SpikeMonitor(self.group)
->>>>>>> 14e4011cf44c83d26d7b984bed0014b3ea5100ac

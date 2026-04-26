@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from brian2 import *
-from model import IzhikevichNeuronConductanceSynapse, ConductanceSTDPSynapse
+from model import IzhikevichNeuronConductanceSynapse, ConductanceSTDPSynapse, TwoCompartmentIzhikevichNeuron
 
 def run_conductance_experiment():
     print("Running Conductance & STDP Biophysical Experiment...")
@@ -8,12 +8,12 @@ def run_conductance_experiment():
 
     # 1. Build the Biological Hardware
     print("Initializing Conductance Neurons and STDP Synapse...")
-    neurons = IzhikevichNeuronConductanceSynapse(N=2)
+    neurons = TwoCompartmentIzhikevichNeuron(N=2)
     
     # 2. Wire them together
     stdp_connection = ConductanceSTDPSynapse(neurons.group, neurons.group)
     # Connect Pre (0) to Post (1) with a low starting weight of 2.0
-    stdp_connection.connect(i=0, j=1, start_weight=2.0)
+    stdp_connection.connect(i=0, j=1)
     
     # 3. Create Monitors
     # The neuron's state_monitor is already tracking v, u, g, and I_syn!
@@ -32,7 +32,7 @@ def run_conductance_experiment():
 
     # PHASE 1: THE BASELINE EPSP
     print("Phase 1: Firing Pre-Neuron (Baseline EPSP)...")
-    neurons.group.I_ext[0] = 10.0  # Shock Neuron 0
+    neurons.group.I_ext[0] = 20.0  # Shock Neuron 0
     net.run(2*ms)
     neurons.group.I_ext[0] = 0.0   # Turn shock off
     
@@ -40,7 +40,7 @@ def run_conductance_experiment():
 
     # PHASE 2: THE LEARNING (LTP)
     print("Phase 2: Firing Post-Neuron (Triggering STDP LTP)...")
-    neurons.group.I_ext[1] = 10.0  # Shock Neuron 1
+    neurons.group.I_ext[1] = 20.0  # Shock Neuron 1
     net.run(2*ms)
     neurons.group.I_ext[1] = 0.0 
     
@@ -48,7 +48,7 @@ def run_conductance_experiment():
 
     # PHASE 3: THE STRENGTHENED EPSP
     print("Phase 3: Firing Pre-Neuron again (Checking the newly learned weight)...")
-    neurons.group.I_ext[0] = 50.0  
+    neurons.group.I_ext[0] = 20.0  
     net.run(2*ms)
     neurons.group.I_ext[0] = 0.0 
     
