@@ -179,6 +179,138 @@ class TwoCompartmentIzhikevichNeuron:
     def inject_current(self, current_value):
         """Inject current directly into the Soma"""
         self.group.I_ext = current_value
+    
+class TwoCompartmentIzhikevichNeuronAMPA_NMDA:
+    def __init__(self, N=1, a=0.02, b=0.2, c=-65.0, d=8.0):
+        """
+        advanced two compartment model of incorporating the dendrite
+        excitary synapses
+        """
+        self.eqs = '''
+        # soma: internal voltage and inhibitor mechanism
+        dv/dt = (0.04*v**2 + 5*v + 140 - u + I_ext + I_axial) / ms : 1
+        du/dt = (a*(b*v - u)) / ms : 1
+        
+        # dendrite: receiving zone
+        dv_dend/dt = (-(v_dend - E_rest) + I_syn - I_axial) / tau_dend : 1
+        
+        # AMPA: fast excititroy current
+        I_ampa = g_ampa * (E_exc - v_dend) : 1
+        dg_ampa/dt = -g_ampa / tau_ampa : 1
+
+        # NMDA: slower excititoruy current requiring depolarization
+        I_nmda = g_nmda * B_nmda * (E_exc - v_dend) : 1
+        dg_nmda/dt = -g_nmda / tau_nmda : 1
+        B_nmda = 1.0 / (1.0 + exp(-(v_dend + 35.0) / 10.0)) : 1  # ungating term for NMDA's magnesium block
+
+        # synaptic current into dendrite incorporating ampa and nmda receptors
+        I_syn = I_ampa + I_nmda : 1
+        
+        # axial current
+        I_axial = kappa * (v_dend - v) : 1
+        
+        # --- Parameters ---
+        I_ext : 1
+        a : 1
+        b : 1
+        c : 1
+        d : 1
+        E_exc : 1
+        E_rest : 1
+        tau_dend : second
+        tau_ampa : second
+        tau_nmda : second
+        kappa : 1
+        '''
+        
+        self.threshold_condition = 'v >= 30'
+        self.reset_equations = '''
+        v = c
+        u = u + d
+        '''
+        
+        self.group = NeuronGroup(N, model=self.eqs, threshold=self.threshold_condition, 
+                                 reset=self.reset_equations, method='euler')
+        
+        self.group.a = a
+        self.group.b = b
+        self.group.c = c
+        self.group.d = d
+        
+        
+        # dendritic parametrers
+        self.group.E_exc = 0.0    
+        self.group.E_rest = -70.0   # the natural resting state of the dendrite
+        self.group.tau_dend = 10*ms # how long the dendrite holds a charge before leaking
+        self.group.tau_ampa = 5*ms
+        self.group.tau_nmda = 80*ms
+        self.group.kappa = 0.5      # coupling strength (higher = easier flow to soma)
+        
+        self.group.v = -70.0
+        self.group.u = b * -70.0
+        self.group.v_dend = -70.0
+        self.group.I_ext = 0.0
+        self.group.g_ampa = 0.0
+        self.group.g_nmda = 0.0      
+        
+        self.state_monitor = StateMonitor(self.group, ['v', 'v_dend', 'u', 'g_ampa', 'g_nmda', 'I_ampa', 'I_nmda', 'I_syn', 'I_axial'], record=True)
+        self.spike_monitor = SpikeMonitor(self.group)
+
+    def inject_current(self, current_value):
+        """Inject current directly into the Soma"""
+        self.group.I_ext = current_value
+class AMPA_NMDA_STDPSynapse:
+    def __init__(self, pre_group, post_group, A_pre=0.005, A_post=-0.00525, w_max=0.1, nmda_ratio=0.5):
+        """
+        STDP synapse that with fast AMPA conductance and slower voltage-dependent NMDA conductance
+        """
+        self.syn_eqs = '''
+        w : 1
+        nmda_ratio : 1
+        taupre : second
+        taupost : second
+        w_max : 1
+        w_min : 1
+        Apre : 1   
+        Apost : 1  
+        dapre/dt = -apre/taupre : 1 (event-driven)
+        dapost/dt = -apost/taupost : 1 (event-driven)
+        '''
+        
+        self.on_pre_eqs = '''
+        g_ampa_post += w
+        g_nmda_post += nmda_ratio * w
+        apre += Apre
+        w = clip(w + apost, w_min, w_max)
+        '''
+        
+        self.on_post_eqs = '''
+        apost += Apost             
+        w = clip(w + apre, w_min, w_max)  
+        '''
+        
+        self.synapses = Synapses(pre_group, post_group, model=self.syn_eqs, 
+                                on_pre=self.on_pre_eqs, on_post=self.on_post_eqs)
+                                
+        # Temporarily store our Python arguments so we can use them later
+        self._Apre = A_pre
+        self._Apost = A_post
+        self._wmax = w_max
+        self._nmda_ratio = nmda_ratio
+
+    def connect(self, i, j, start_weight=0.02):
+        """Helper function to connect indices and set starting weight"""
+        self.synapses.connect(i=i, j=j)
+        
+        self.synapses.taupre = 20*ms
+        self.synapses.taupost = 20*ms
+        self.synapses.w_max = self._wmax
+        self.synapses.w_min = 0.0
+        self.synapses.Apre = self._Apre
+        self.synapses.Apost = self._Apost
+        self.synapses.nmda_ratio = self._nmda_ratio
+        self.synapses.w = start_weight
+
 
 class ConductanceSTDPSynapse:
     def __init__(self, pre_group, post_group, A_pre=0.005, A_post=-0.00525, w_max=0.1):
